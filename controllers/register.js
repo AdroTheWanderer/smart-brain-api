@@ -1,40 +1,45 @@
-const handleRegister = (req, res, db, bcrypt) => {
+const handleRegister = async (req, res, db, bcrypt) => {
   const { email, name, password } = req.body;
+
+  // Validación básica
   if (!email || !name || !password) {
     return res.status(400).json('incorrect form submission');
   }
-  const hash = bcrypt.hashSync(password);
-    db.transaction(trx => {
-      trx.insert({
-        hash: hash,
-        email: email
-      })
-      .into('login')
-      .returning('email')
-      .then(loginEmail => {
-        return trx('users')
-          .returning('*')
-          .insert({
-            // If you are using knex.js version 1.0.0 or higher this now returns an array of objects. Therefore, the code goes from:
-            // loginEmail[0] --> this used to return the email
-            // TO
-            // loginEmail[0].email --> this now returns the email
-            email: loginEmail[0].email,
-            name: name,
-            joined: new Date()
-          })
-          .then(user => {
-            res.json(user[0]);
-          })
-      })
-      .then(trx.commit)
-      .catch(trx.rollback)
-    })
-    .catch(err => res.status(400).json('unable to register'))
-}
 
-module.exports = {
-  handleRegister: handleRegister
+  // Hash de contraseña
+  const hash = bcrypt.hashSync(password);
+
+  try {
+    // Transacción
+    const user = await db.transaction(async (trx) => {
+      // Insert en tabla login
+      const loginEmail = await trx('login')
+        .insert({
+          hash: hash,
+          email: email,
+        })
+        .returning('email');
+
+      // Insert en tabla users
+      const newUser = await trx('users')
+        .insert({
+          email: loginEmail[0].email,   // Para Knex 1.0+
+          name: name,
+          joined: new Date(),
+        })
+        .returning('*');
+
+      return newUser[0];
+    });
+
+    res.json(user);
+
+  } catch (err) {
+    console.error("Registration error:", err);
+    res.status(400).json('unable to register');
+  }
 };
 
-
+module.exports = {
+  handleRegister,
+};
