@@ -10,16 +10,10 @@ const profile = require('./controllers/profile');
 const image = require('./controllers/image');
 
 const db = knex({ 
-  // connect to your own database here:
   client: 'pg',
   connection: {
-    connectionString : process.env.DATABASE_URL,
-    ssl: {rejectUnauthorized: false},
-    host : process.env.DATABASE_HOST,
-    port: 5432,
-    user : process.env.DATABASE_USER,
-    password : process.env.DATABASE_PW,
-    database : process.env.DATABASE_DB
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
   }
 });
 
@@ -28,7 +22,9 @@ const app = express();
 app.use(cors())
 app.use(express.json()); // latest version of exressJS now comes with Body-Parser!
 
-app.get('/', (req, res)=> { res.send(db.users) })
+app.get('/', (req, res) => {
+  res.send('Smart Brain API is running');
+});
 app.post('/signin', signin.handleSignin(db, bcrypt))
 app.post('/register', (req, res) => { register.handleRegister(req, res, db, bcrypt) })
 app.get('/profile/:id', (req, res) => { profile.handleProfileGet(req, res, db)})
